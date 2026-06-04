@@ -27,14 +27,17 @@ const GROUP_COL = '__nc_group_id';
 //      always returned, even if hidden in that view.
 //   3. PKs and FKs are always returned (selectObject's fieldsSet path does
 //      not auto-promote them, but downstream code relies on them).
-//   4. If the caller supplied their own `fieldsSet`, it narrows the result
-//      further but cannot widen beyond rules 1–3.
+//   4. If the caller supplied a `fields`/`fieldsSet` filter, it narrows the
+//      result further but cannot widen beyond rules 1–3. `callerFields` is
+//      the raw `?fields=` query (comma-separated string or array of column
+//      IDs or titles) and is resolved to titles via `refColumns`.
 async function deriveAllowedFieldsForTargetView(params: {
   context: NcContext;
   refTable: Model;
   targetViewId?: string | null;
   fkDisplayValueColumnId?: string | null;
   callerFieldsSet?: Set<string>;
+  callerFields?: string | string[];
 }): Promise<Set<string>> {
   const {
     context,
@@ -42,6 +45,7 @@ async function deriveAllowedFieldsForTargetView(params: {
     targetViewId,
     fkDisplayValueColumnId,
     callerFieldsSet,
+    callerFields,
   } = params;
   const refColumns = await refTable.getColumns(context);
 
@@ -67,10 +71,30 @@ async function deriveAllowedFieldsForTargetView(params: {
     for (const col of refColumns) base.add(col.title);
   }
 
-  if (callerFieldsSet?.size) {
+  // Resolve caller's narrowing input. Prefer the typed `callerFieldsSet`
+  // (already title-keyed) when present; otherwise parse the raw `fields=`
+  // query and map column IDs to titles. `*` and empty values are no-ops.
+  let narrowingSet = callerFieldsSet;
+  if (!narrowingSet?.size && callerFields && callerFields !== '*') {
+    const fieldList = Array.isArray(callerFields)
+      ? callerFields
+      : String(callerFields)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+    if (fieldList.length) {
+      narrowingSet = new Set<string>();
+      for (const f of fieldList) {
+        const col = refColumns.find((c) => c.id === f || c.title === f);
+        if (col) narrowingSet.add(col.title);
+      }
+    }
+  }
+
+  if (narrowingSet?.size) {
     const narrowed = new Set<string>(alwaysAllowed);
     for (const title of base) {
-      if (callerFieldsSet.has(title)) narrowed.add(title);
+      if (narrowingSet.has(title)) narrowed.add(title);
     }
     return narrowed;
   }
@@ -276,7 +300,13 @@ export const relationDataFetcher = (param: {
         // owner intended to keep private.
         enforceTargetViewVisibility?: boolean;
       },
-      args: { limit?; offset?; fieldsSet?: Set<string> } = {},
+      args: {
+        limit?;
+        offset?;
+        fieldsSet?: Set<string>;
+        fields?: string | string[];
+        f?: string | string[];
+      } = {},
       selectAllRecords = false,
     ) {
       const { where, sort, ...rest } = baseModel._getListArgs(args as any, {
@@ -364,6 +394,7 @@ export const relationDataFetcher = (param: {
             targetViewId: viewId,
             fkDisplayValueColumnId: relColOptions.fk_display_value_column_id,
             callerFieldsSet: args.fieldsSet,
+            callerFields: args.fields ?? args.f,
           })
         : args.fieldsSet;
 
@@ -622,7 +653,13 @@ export const relationDataFetcher = (param: {
         // columns are returned.
         enforceTargetViewVisibility?: boolean;
       },
-      args: { limit?; offset?; fieldSet?: Set<string> } = {},
+      args: {
+        limit?;
+        offset?;
+        fieldSet?: Set<string>;
+        fields?: string | string[];
+        f?: string | string[];
+      } = {},
     ) {
       try {
         const { where, sort, ...rest } = baseModel._getListArgs(args as any, {
@@ -693,6 +730,7 @@ export const relationDataFetcher = (param: {
               fkDisplayValueColumnId:
                 relationColOpts.fk_display_value_column_id,
               callerFieldsSet: args.fieldSet,
+              callerFields: args.fields ?? args.f,
             })
           : args.fieldSet;
 
