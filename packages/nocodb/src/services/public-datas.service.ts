@@ -1211,15 +1211,15 @@ export class PublicDatasService {
         requestObj,
         {
           [key]: async (args) => {
-            // pkAndPvOnly restricts the SELECT to PK + display value at the SQL
-            // layer, so related-table columns the view owner did not expose
-            // cannot leak — works on both CE and EE (where the AST-level
-            // postProcessData short-circuits).
+            // enforceTargetViewVisibility restricts the SELECT to the
+            // related table's configured (or default) view at the SQL
+            // layer, plus the LTAR's custom display-value column, so the
+            // response cannot leak columns the view owner did not expose.
             return await baseModel.mmList(
               {
                 colId: param.columnId,
                 parentId: param.rowId,
-                pkAndPvOnly: true,
+                enforceTargetViewVisibility: true,
               },
               args,
             );
@@ -1312,14 +1312,15 @@ export class PublicDatasService {
         requestObj,
         {
           [key]: async (args) => {
-            // pkAndPvOnly restricts the SELECT to PK + display value at the SQL
-            // layer, so related-table columns the view owner did not expose
-            // cannot leak — works on both CE and EE.
+            // enforceTargetViewVisibility restricts the SELECT to the
+            // related table's configured (or default) view at the SQL
+            // layer, plus the LTAR's custom display-value column, so the
+            // response cannot leak columns the view owner did not expose.
             return await baseModel.hmList(
               {
                 colId: param.columnId,
                 id: param.rowId,
-                pkAndPvOnly: true,
+                enforceTargetViewVisibility: true,
               },
               args,
             );

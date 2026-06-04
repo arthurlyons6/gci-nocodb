@@ -1713,7 +1713,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       apiVersion?: NcApiVersion;
       nested?: boolean;
       linksAsLtar?: boolean;
-      pkAndPvOnly?: boolean;
+      enforceTargetViewVisibility?: boolean;
     },
     args: { limit?; offset?; fieldsSet?: Set<string> } = {},
     selectAllRecords = false,
@@ -1752,7 +1752,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       apiVersion?: NcApiVersion;
       nested?: boolean;
       linksAsLtar?: boolean;
-      pkAndPvOnly?: boolean;
+      enforceTargetViewVisibility?: boolean;
     },
     args: { limit?; offset?; fieldSet?: Set<string> } = {},
   ) {
