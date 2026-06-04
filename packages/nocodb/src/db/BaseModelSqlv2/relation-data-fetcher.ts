@@ -113,19 +113,57 @@ export const relationDataFetcher = (param: {
       data,
       model,
       query,
+      allowedFieldsSet,
     }: {
       data: any[];
       model: Model;
       query: any;
+      // Set by the public/shared-view relation fetch (mmList/hmList with
+      // `enforceTargetViewVisibility`). The CE post-process step below runs
+      // `nocoExecute` over a `getAst`-derived AST; without a restriction that
+      // AST spans the whole related-table model and re-expands relation
+      // columns, re-reading the related table UNRESTRICTED and re-leaking
+      // columns the SQL layer (`selectObject`) already excluded. When this is
+      // provided the AST is narrowed to these column titles, relation columns
+      // (LTAR/Links/Lookup) that would trigger a nested re-read are stripped,
+      // and PKs are always kept. EE skips this path entirely.
+      allowedFieldsSet?: Set<string>;
     },
   ) {
     if (Noco.isEE()) {
       return data;
     }
 
+    let effectiveQuery = query;
+    if (allowedFieldsSet?.size) {
+      const cols = model.columns?.length
+        ? model.columns
+        : await model.getColumns(context);
+      // Relation/lookup columns traverse into another table; resolving them
+      // here re-reads that table without the view restriction, so exclude
+      // them from the projection. Rollup/formula/etc. stay (scalar values).
+      const nestedExpandingUidts = [
+        UITypes.LinkToAnotherRecord,
+        UITypes.Links,
+        UITypes.Lookup,
+      ];
+      const projectionTitles = new Set<string>();
+      for (const col of cols) {
+        // PKs are always needed downstream (id / id_fields).
+        if (col.pk) {
+          projectionTitles.add(col.title);
+          continue;
+        }
+        if (!allowedFieldsSet.has(col.title)) continue;
+        if (nestedExpandingUidts.includes(col.uidt)) continue;
+        projectionTitles.add(col.title);
+      }
+      effectiveQuery = { ...(query || {}), fields: [...projectionTitles] };
+    }
+
     const { ast, parsedQuery } = await getAst(context, {
       model,
-      query,
+      query: effectiveQuery,
       extractOnlyPrimaries:
         context.cacheMap?.get('relation_postProcessData') ?? false,
     });
@@ -453,6 +491,9 @@ export const relationDataFetcher = (param: {
         }),
         model: refTable,
         query: args,
+        allowedFieldsSet: enforceTargetViewVisibility
+          ? effectiveFieldsSet
+          : undefined,
       });
     },
 
@@ -772,6 +813,9 @@ export const relationDataFetcher = (param: {
           }),
           model: childTable,
           query: args,
+          allowedFieldsSet: enforceTargetViewVisibility
+            ? effectiveFieldsSet
+            : undefined,
         });
       } catch (e) {
         throw e;
