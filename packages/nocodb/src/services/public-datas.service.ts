@@ -1198,6 +1198,9 @@ export class PublicDatasService {
       NcError.recordNotFound(param.rowId);
     }
 
+    // Strip query keys the public caller must not control (getHiddenColumn, nested).
+    const sanitizedQuery = sanitizePublicQuery(param.query);
+
     const key = `List`;
     const requestObj: any = {
       [key]: 1,
@@ -1208,10 +1211,15 @@ export class PublicDatasService {
         requestObj,
         {
           [key]: async (args) => {
+            // pkAndPvOnly restricts the SELECT to PK + display value at the SQL
+            // layer, so related-table columns the view owner did not expose
+            // cannot leak — works on both CE and EE (where the AST-level
+            // postProcessData short-circuits).
             return await baseModel.mmList(
               {
                 colId: param.columnId,
                 parentId: param.rowId,
+                pkAndPvOnly: true,
               },
               args,
             );
@@ -1219,7 +1227,7 @@ export class PublicDatasService {
         },
         {},
 
-        { nested: { [key]: param.query } },
+        { nested: { [key]: sanitizedQuery } },
       )
     )?.[key];
 
@@ -1228,7 +1236,7 @@ export class PublicDatasService {
         colId: param.columnId,
         parentId: param.rowId,
       },
-      param.query,
+      sanitizedQuery,
     );
 
     return new PagedResponseImpl(data, { ...param.query, count });
@@ -1291,6 +1299,9 @@ export class PublicDatasService {
       NcError.recordNotFound(param.rowId);
     }
 
+    // Strip query keys the public caller must not control (getHiddenColumn, nested).
+    const sanitizedQuery = sanitizePublicQuery(param.query);
+
     const key = `List`;
     const requestObj: any = {
       [key]: 1,
@@ -1301,17 +1312,21 @@ export class PublicDatasService {
         requestObj,
         {
           [key]: async (args) => {
+            // pkAndPvOnly restricts the SELECT to PK + display value at the SQL
+            // layer, so related-table columns the view owner did not expose
+            // cannot leak — works on both CE and EE.
             return await baseModel.hmList(
               {
                 colId: param.columnId,
                 id: param.rowId,
+                pkAndPvOnly: true,
               },
               args,
             );
           },
         },
         {},
-        { nested: { [key]: param.query } },
+        { nested: { [key]: sanitizedQuery } },
       )
     )?.[key];
 
@@ -1320,7 +1335,7 @@ export class PublicDatasService {
         colId: param.columnId,
         id: param.rowId,
       },
-      param.query,
+      sanitizedQuery,
     );
 
     return new PagedResponseImpl(data, { ...param.query, count });

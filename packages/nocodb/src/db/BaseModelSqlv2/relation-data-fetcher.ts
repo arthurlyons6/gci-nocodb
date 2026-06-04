@@ -199,12 +199,17 @@ export const relationDataFetcher = (param: {
         apiVersion,
         nested = false,
         linksAsLtar = false,
+        pkAndPvOnly: forcePkAndPvOnly = false,
       }: {
         colId: string;
         parentId: any;
         apiVersion?: NcApiVersion;
         nested?: boolean;
         linksAsLtar?: boolean;
+        // Force SQL-level restriction to PK + display value (+ fk_display_value_column_id).
+        // Callers on the public/shared-view boundary set this to avoid leaking
+        // related-table columns the view owner did not intend to expose.
+        pkAndPvOnly?: boolean;
       },
       args: { limit?; offset?; fieldsSet?: Set<string> } = {},
       selectAllRecords = false,
@@ -282,7 +287,10 @@ export const relationDataFetcher = (param: {
       await refBaseModel.selectObject({
         qb,
         fieldsSet: args.fieldsSet,
-        pkAndPvOnly: relColOptions.isCrossBaseLink() || hasLimitedAccess,
+        pkAndPvOnly:
+          forcePkAndPvOnly ||
+          relColOptions.isCrossBaseLink() ||
+          hasLimitedAccess,
         fk_display_value_column_id: relColOptions.fk_display_value_column_id,
         linksAsLtar,
       });
@@ -528,12 +536,15 @@ export const relationDataFetcher = (param: {
         id,
         apiVersion,
         linksAsLtar = false,
+        pkAndPvOnly: forcePkAndPvOnly = false,
       }: {
         colId: string;
         id: any;
         apiVersion?: NcApiVersion;
         nested?: boolean;
         linksAsLtar?: boolean;
+        // See mmList — public callers set this to enforce SQL-level PK+PV restriction.
+        pkAndPvOnly?: boolean;
       },
       args: { limit?; offset?; fieldSet?: Set<string> } = {},
     ) {
@@ -601,7 +612,10 @@ export const relationDataFetcher = (param: {
         await childBaseModel.selectObject({
           qb,
           fieldsSet: args.fieldSet,
-          pkAndPvOnly: relationColOpts.isCrossBaseLink() || hasLimitedAccess,
+          pkAndPvOnly:
+            forcePkAndPvOnly ||
+            relationColOpts.isCrossBaseLink() ||
+            hasLimitedAccess,
           fk_display_value_column_id:
             relationColOpts.fk_display_value_column_id,
           linksAsLtar,
