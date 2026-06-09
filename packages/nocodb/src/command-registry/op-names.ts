@@ -140,11 +140,13 @@ export const OperationName = {
   tableSyncDelete: 'tableSyncDelete',
   tableSyncFreeze: 'tableSyncFreeze',
   tableSyncResume: 'tableSyncResume',
+  tableSyncConfigUpdate: 'tableSyncConfigUpdate',
 
   // App Sync (integration-based SyncConfig)
   appSyncCreate: 'appSyncCreate',
   appSyncUpdate: 'appSyncUpdate',
   appSyncDelete: 'appSyncDelete',
+  appSyncConfigUpdate: 'appSyncConfigUpdate',
 
   // Date dependency
   dateDependencyUpdate: 'dateDependencyUpdate',
