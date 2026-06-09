@@ -129,10 +129,22 @@ export const OperationName = {
   recordTemplateUpdate: 'recordTemplateUpdate',
   recordTemplateDelete: 'recordTemplateDelete',
 
-  // Sync
+  // Sync (legacy SyncSource)
   syncCreate: 'syncCreate',
   syncUpdate: 'syncUpdate',
   syncDelete: 'syncDelete',
+
+  // Table Sync (table-to-table)
+  tableSyncCreate: 'tableSyncCreate',
+  tableSyncUpdate: 'tableSyncUpdate',
+  tableSyncDelete: 'tableSyncDelete',
+  tableSyncFreeze: 'tableSyncFreeze',
+  tableSyncResume: 'tableSyncResume',
+
+  // App Sync (integration-based SyncConfig)
+  appSyncCreate: 'appSyncCreate',
+  appSyncUpdate: 'appSyncUpdate',
+  appSyncDelete: 'appSyncDelete',
 
   // Date dependency
   dateDependencyUpdate: 'dateDependencyUpdate',

@@ -24,6 +24,18 @@ export enum TableSyncInputMode {
   Paste = 'paste',
 }
 
+/**
+ * Lifecycle status of a single sync mapping (a source↔destination table pair).
+ * Shared by both App Sync (`SyncMapping`) and Table Sync (`TableSyncMapping`).
+ * When a synced destination table is trashed, its mapping is set to
+ * `Suspended` (not deleted) so the sync skips it; restoring the table flips it
+ * back to `Active` and the sync resumes on that table.
+ */
+export enum SyncMappingStatus {
+  Active = 'active',
+  Suspended = 'suspended',
+}
+
 export enum TableSyncMappingRole {
   /** The main source table for the sync. Exactly one row per sync. */
   Main = 'main',
@@ -53,6 +65,9 @@ export interface TableSyncMappingType {
 
   role: TableSyncMappingRole;
 
+  /** Active by default; Suspended while its dest table sits in trash. */
+  status?: SyncMappingStatus;
+
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +92,9 @@ export interface TableSyncType {
   status: TableSyncStatus;
   last_error: string | null;
   last_synced_at: string | null;
+
+  /** Soft-delete flag. true = trashed (recoverable), null/false = active. */
+  deleted?: boolean;
 
   sync_job_id: string | null;
 
